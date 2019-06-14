@@ -26,7 +26,6 @@ ImgAtb<COR> pintaFundo(ImgAtb<COR> a, int ls, int cs)
             q.push(c - 1); //W
         }
     }
-    cout << b(-10, +1000) << endl;
     return b;
 }
 
@@ -65,7 +64,7 @@ int main(int argc, char **argv)
     if (argc != 3)
     {
         printf("ep1: Conta o numero de moedas em uma imagem\n");
-        printf("ep1 arquivo_de_entrada.jpg arquivo_de_saida.jpg\n");
+        printf("Uso\n");
         printf("ep1 arquivo_de_entrada.jpg arquivo_de_saida.jpg\n");
         erro("Erro: Numero de argumentos invalido.");
         exit(0);
@@ -75,11 +74,9 @@ int main(int argc, char **argv)
     le(img, argv[1]);
     ImgAtb<COR> imgreduz;
     resize(img, imgreduz, Size(img.cols / 5, img.rows / 5));
-
-    ImgAtb<COR> sai = imgreduz.clone();
-    
     cvtColor(imgreduz, imgreduz, CV_BGR2HSV);
     imgreduz.backg = COR(0, 0, 0);
+
     ImgAtb<COR> tmp = imgreduz.clone();
     tmp = pintaFundo(imgreduz, 0, 0);
     for (int l = 0; l <= tmp.rows; l++)
@@ -92,22 +89,9 @@ int main(int argc, char **argv)
             }
         }
     }
-
-    for (int l = 0; l <= tmp.rows; l++)
-    {
-        for (int c = 0; c <= tmp.cols; c++)
-        {
-            if (tmp(l, c - 1) not_eq tmp(l, c) || tmp(l - 1, c) not_eq tmp(l, c))
-            {
-                sai(l, c) = COR(0, 0, 0);
-            }
-        }
-    }
     cvtColor(tmp, tmp, CV_HSV2BGR);
-    imp(tmp,"tmp.jpg");
     
     Point ce;
-
     ImgAtb<COR> t0(40, 40, COR(128, 128, 128));
     ce.x = 20;
     ce.y = 20;
@@ -161,62 +145,58 @@ int main(int argc, char **argv)
     te[7] = aumentaCanvas(te[7], tmp.rows, tmp.cols, (t7.rows - 1) / 2, (t7.cols - 1) / 2, 0.0);
 
     Mat_<GRY> teg[8];
-    queue<int> cnd;
     // Gera imagem com os candidatos a centro
     for(int i = 0; i < 8; i++)
     {  
         converte(te[i],teg[i]);
     }
-    Mat_<GRY> temax(tmp.rows, tmp.cols);
-
+    Mat_<COR> temax(tmp.rows, tmp.cols, COR(0,0,0));
     for (int l = 0; l < tmp.rows; l++)
     {
         for (int c = 0; c < tmp.cols; c++)
         {
             if(teg[0](l, c) > 190 || teg[1](l, c) > 190 || teg[2](l, c) > 190 || teg[3](l, c) > 190 || teg[4](l, c) > 190 || teg[5](l, c) > 190 || teg[6](l, c) > 190 || teg[7](l, c) > 190)
             {
-                temax(l, c) = teg[0](l, c);
+                temax(l, c)[0] = teg[0](l, c);
+                temax(l, c)[1] = 0;
                 for(int i = 1; i < 8; i++)
                 {  
-                    if(teg[i](l, c) > temax(l, c))
+                    if(teg[i](l, c) > temax(l, c)[0])
                     { 
-                        temax(l, c) = teg[i](l, c);
+                        temax(l, c)[0] = teg[i](l, c);
+                        temax(l, c)[1] = i;
                     }
                 }
             }
         }
     }
-
     // cria uma lista com os candidatos a centro
+    queue<int> cnd;
     for (int l = 0; l < tmp.rows; l++)
     {
         for (int c = 0; c < tmp.cols; c++)
         {
             if(teg[0](l, c) > 190 || teg[1](l, c) > 190 || teg[2](l, c) > 190 || teg[3](l, c) > 190 || teg[4](l, c) > 190 || teg[5](l, c) > 190 || teg[6](l, c) > 190 || teg[7](l, c) > 190)
             {
-                if(temax(l,c) >= temax(l-1,c-1) && temax(l,c) >= temax(l-1,c) && temax(l,c) >= temax(l-1,c+1) && temax(l,c) >= temax(l,c-1) && temax(l,c) >= temax(l,c+1) && temax(l,c) >= temax(l+1,c-1) && temax(l,c) >= temax(l+1,c) && temax(l,c) >= temax(l+1,c+1))
+                if(temax(l,c)[0] >= temax(l-1,c-1)[0] && temax(l,c)[0] >= temax(l-1,c)[0] && temax(l,c)[0] >= temax(l-1,c+1)[0] && temax(l,c)[0] >= temax(l,c-1)[0] && temax(l,c)[0] >= temax(l,c+1)[0] && temax(l,c)[0] >= temax(l+1,c-1)[0] && temax(l,c)[0] >= temax(l+1,c)[0] && temax(l,c)[0] >= temax(l+1,c+1)[0])
                 {  
                     cnd.push(l);
                     cnd.push(c);
-                    cnd.push(temax(l,c));
+                    cnd.push(temax(l,c)[0]);
+                    cnd.push(temax(l,c)[1]);
                 }
             }
         }
     }
-    // Resto
-    int x1=0,y1=0,v1=0,x2=0,y2=0,v2=0;
+
     queue<int> cnt;
+    int x1=0,y1=0,v1=0,s1=0,x2=0,y2=0,v2=0,s2=0;
     while(!cnd.empty())
     {
+        int isgood;
         queue<int> temp;
         for(int i = 0; i < cnd.size(); i++)
         {
-            cnd.push(cnd.front());
-            temp.push(cnd.front());
-            cnd.pop();
-            cnd.push(cnd.front());
-            temp.push(cnd.front());
-            cnd.pop();
             cnd.push(cnd.front());
             temp.push(cnd.front());
             cnd.pop();
@@ -227,86 +207,116 @@ int main(int argc, char **argv)
         cnd.pop();
         v1 = cnd.front();
         cnd.pop();
-        while(!temp.empty())
+        s1 = cnd.front();
+        cnd.pop();
+        temp.pop();
+        temp.pop();
+        temp.pop();
+        temp.pop();
+        if(!temp.empty())
         {
-            x2 = temp.front();
-            temp.pop();
-            y2 = temp.front();
-            temp.pop();
-            v2 = temp.front();
-            temp.pop();
-
-            double wot = sqrt(double(elev2(x1 - x2) + elev2(y1 - y2)));
-            if(wot < 15)
+            while(!temp.empty())
             {
-                if(v1 > v2)
+                isgood = 1;
+                x2 = temp.front();
+                temp.pop();
+                y2 = temp.front();
+                temp.pop();
+                v2 = temp.front();
+                temp.pop();
+                s2 = temp.front();
+                temp.pop();
+                double dist = sqrt(double(elev2(x1 - x2) + elev2(y1 - y2)));
+                if(dist < 25)
                 {
-                    cnd.push(x1);
-                    cnd.push(y1);
-                    cnd.push(v1);
+                    if(v1 > v2)
+                    {
+                        cnd.push(x1);
+                        cnd.push(y1);
+                        cnd.push(v1);
+                        cnd.push(s1);
+                    }
+                    else if(v1 < v2)
+                    {
+                        cnd.push(x2);
+                        cnd.push(y2);
+                        cnd.push(v2);
+                        cnd.push(s2);
+                    }
+                    else
+                    {
+                        if(x1 != x2 || y1 != y2)
+                        {
+                            int x = (x1+x2)/2;
+                            int y = (y1+y2)/2;
+                            int v = (v1+v2)/2;
+                            int s = (s1+s2)/2;
+                            cnd.push(x);
+                            cnd.push(y);
+                            cnd.push(v);
+                            cnd.push(s);
+                        }
+                    }
+                    isgood = 0;
+                    break;
                 }
-                else if(v1 < v2)
-                {
-                    cnd.push(x2);
-                    cnd.push(y2);
-                    cnd.push(v2);
-                }
-                else
-                {
-                    int x = (x1+x2)/2;
-                    int y = (y1+y2)/2;
-                    int z = (v1+v2)/2;
-                    cnt.push(x);
-                    cnt.push(y);
-                    cnt.push(z);
-                }
-                break;
             }
-            else
+            if(isgood == 1)
             {
                 cnt.push(x1);
                 cnt.push(y1);
                 cnt.push(v1);
+                cnt.push(s1);
             }
         }
+        else
+        {
+            cnt.push(x1);
+            cnt.push(y1);
+            cnt.push(v1);
+            cnt.push(s1);
+        }
     }
-    imp(temax,"temax.jpg");
-    Mat_<GRY> centros(tmp.rows, tmp.cols, GRY(0));
+    int num = 0;
+    Point_<int> p;
+    Mat_<COR> centros(tmp.rows, tmp.cols, COR(255,255,255));
     while(!cnt.empty())
     {
-        x1 = cnt.front();
+        p.y = cnt.front();
         cnt.pop();
-        y1 = cnt.front();
+        p.x = cnt.front();
         cnt.pop();
         v1 = cnt.front();
         cnt.pop();
-        centros(x1,y1) = v1;
+        s1 = cnt.front();
+        cnt.pop();
+        if(s1 == 0)
+            s1 = 20;
+        if(s1 == 1)
+            s1 = 22;
+        if(s1 == 2)
+            s1 = 25;
+        if(s1 == 3)
+            s1 = 27;
+        if(s1 == 4)
+            s1 = 30;
+        if(s1 == 5)
+            s1 = 32;
+        if(s1 == 6)
+            s1 = 35;
+        if(s1 == 7)
+            s1 = 37;
+        circle(imgreduz, p, s1, 128,1);
+        circle(imgreduz, p, 1, 128,-1);
+        num++;
     }
-    imp(centros,"centros.jpg");
-
-
-
-    // cout << x.front() << endl;
-    // cout << y.front() << endl;
-    // cout << v.front() << endl;
-    //         if (te1g(l, c) < 200 && te1g(l, c) not_eq 0)
-    //         {
-    //             te1g(l, c) = GRY(0);
-    //         }
-    //         if (te2g(l, c) < 200 && te2g(l, c) not_eq 0)
-    //         {
-    //             te2g(l, c) = GRY(0);
-    //         }
-    //         if (te3g(l, c) < 200 && te3g(l, c) not_eq 0)
-    //         {
-    //             te3g(l, c) = GRY(0);
-    //         }
-    //         
-    //     }
-    // }
-    // imp(te1g,"te1g.jpg");
-    // imp(te2g,"te2g.jpg");
-    // imp(te3g,"te3g.jpg");
-    // imp(total,"total.jpg");
-
+    cvtColor(imgreduz, imgreduz, CV_HSV2BGR);
+    p.x = 5;
+    p.y = 20;
+    char s[100];
+    sprintf(s, "Ha %d moeda(s)", num);
+    putText(imgreduz,s,p,FONT_HERSHEY_SIMPLEX,0.75,0,2.5);
+    resize(imgreduz, imgreduz, Size(imgreduz.cols * 5, imgreduz.rows * 5));
+    cout << num << endl;
+    imp(imgreduz,argv[2]);
 }
